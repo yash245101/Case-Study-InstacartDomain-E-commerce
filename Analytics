@@ -1,0 +1,23 @@
+#Merge all the data frames based on the common key and create a single DataFrame
+a=spark.read.csv('aisles.csv',header=True)
+p=spark.read.csv('products.csv',header=True)
+d=spark.read.csv('departments.csv',header=True)
+ot=spark.read.csv('order_products__prior.csv',header=True)
+o=spark.read.csv('orders.csv',header=True)
+df=p.join(a,a.aisle_id==p.aisle_id,'left').drop(a.aisle_id).join(d,d.department_id==p.department_id,'left').drop(d.department_id).join(ot,ot.product_id==p.product_id,'right').drop(ot.product_id).join(o,o.order_id==ot.order_id,'left').drop(ot.order_id)
+
+#Check missing data
+
+filtered=df.filter("isnotnulland".join(df.columns)+"isnotnull")filtered.count()
+
+#List the most ordered products (top 10)
+filtered.groupBy("product_name").count().sort(col("count").desc()).show(10,False)
+
+#Do people usually reorder the same previous ordered products
+filtered.groupBy("product_name").agg(F.avg("reordered"),F.count("reordered")).sort(col("count(reordered)").desc()).show(10,False)
+
+#List most reordered products
+filtered.groupBy("product_name").agg(avg("reordered"),count("reordered")).show(10,False)
+
+#Most important department and aisle (by number of products)
+df_prods=products.join(aisles,aisles.aisle_id==products.aisle_id,"left").drop(aisles.aisle_id).join(departments,departments.department_id==products.department_id,"left").drop(departments.department_id)df_prods.groupBy("aisle").count().sort(col("count").desc()).show(10,False)df_prods.groupBy("department").count().sort(col("count").desc()).show(10,False)
